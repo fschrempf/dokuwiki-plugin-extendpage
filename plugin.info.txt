@@ -1,0 +1,7 @@
+base   extendpage
+author Frieder Schrempf
+email  dev@fris.de
+date   2021-01-16
+name   extendpage plugin
+desc   Extend pages with id matching a regex by content from a different page
+url    https://github.com/fschrempf/dokuwiki-plugin-extendpage

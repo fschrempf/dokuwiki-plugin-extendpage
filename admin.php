@@ -49,25 +49,23 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
 
         if ($INPUT->str('action') && $INPUT->arr('assignment') && checkSecurityToken()) {
             $assignment = $INPUT->arr('assignment');
-            if (!blank($assignment['pattern']) && !blank($assignment['page'])) {
-                if ($INPUT->str('action') === 'delete') {
-                    $ok = $assignments->removePattern($assignment['pattern'], $assignment['page'],
-                                                      $assignment['pos']);
-                    if (!$ok) msg('failed to remove pattern', -1);
-                } elseif ($INPUT->str('action') === 'add') {
-                    if ($assignment['pattern'][0] == '/') {
-                        if (@preg_match($assignment['pattern'], null) === false) {
-                            msg('Invalid regular expression. Pattern not saved', -1);
-                        } else {
-                            $ok = $assignments->addPattern($assignment['pattern'], $assignment['page'],
-                                                           $assignment['pos']);
-                            if (!$ok) msg('failed to add pattern', -1);
-                        }
+            if (!blank($assignment['id']) && $INPUT->str('action') === 'delete') {
+                $ok = $assignments->removePattern($assignment['id']);
+                if (!$ok) msg('failed to remove pattern', -1);
+            } else if (!blank($assignment['pattern']) && !blank($assignment['page']) &&
+                       $INPUT->str('action') === 'add') {
+                if ($assignment['pattern'][0] == '/') {
+                    if (@preg_match($assignment['pattern'], null) === false) {
+                        msg('Invalid regular expression. Pattern not saved', -1);
                     } else {
                         $ok = $assignments->addPattern($assignment['pattern'], $assignment['page'],
-                                                       $assignment['pos']);
+                                                        $assignment['pos']);
                         if (!$ok) msg('failed to add pattern', -1);
                     }
+                } else {
+                    $ok = $assignments->addPattern($assignment['pattern'], $assignment['page'],
+                                                    $assignment['pos']);
+                    if (!$ok) msg('failed to add pattern', -1);
                 }
             }
 
@@ -106,6 +104,7 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
 
         // existing assignments
         foreach ($assignments as $assignment) {
+            $id = $assignment['id'];
             $pattern = $assignment['pattern'];
             $pos = $assignment['pos'];
             $page = $assignment['page'];
@@ -117,9 +116,7 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
                 'page' => 'extendpage',
                 'action' => 'delete',
                 'sectok' => getSecurityToken(),
-                'assignment[pattern]' => $pattern,
-                'assignment[pos]' => $pos,
-                'assignment[page]' => $page,
+                'assignment[id]' => $id
                 )
             );
 
@@ -136,7 +133,8 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
         echo '<td><input type="text" name="assignment[pattern]" /></td>';
         echo '<td><select name="assignment[pos]">';
         echo '<option value="top">Top</option>';
-        echo '<option value="bottom">Bottom</option></select></td>';
+        echo '<option value="bottom">Bottom</option>';
+        echo '<option value="replace">Replace</option></select></td>';
         echo '<td><input type="text" name="assignment[page]" /></td>';
         echo '<td><button type="submit" name="action" value="add">Add</button></td>';
         echo '</tr>';

@@ -43,7 +43,7 @@ class action_plugin_extendpage extends DokuWiki_Action_Plugin
     public function extend_page(Doku_Event $event, $param)
     {
         global $ID;
-        $positions = array('top', 'bottom'); 
+        $positions = array('replace', 'top', 'bottom');
 
         if (!page_exists($ID)) return;
 
@@ -54,15 +54,19 @@ class action_plugin_extendpage extends DokuWiki_Action_Plugin
         }
 
         foreach ($positions as $pos) {
-            $idx = $pos === 'top' ? 0:strlen($event->data);
+            $idx = $pos === 'bottom' ? strlen($event->data):0;
             $extensions = $assignments->getPageAssignments($ID, $pos);
             if (!$extensions) return true;
 
             foreach ($extensions as $ext) {
-                $event->data = substr_replace($event->data,
-                    ($pos === 'top' ? '':'\\\ ') . rawWiki($ext) . ($pos === 'top' ? '\\\ ':''),
-                    $idx, 0
-                );
+                if ($pos === 'replace') {
+                    $event->data = rawWiki($ext['page']);
+                } else {
+                    $event->data = substr_replace($event->data,
+                        ($pos === 'top' ? '':'\\\ ') . rawWiki($ext['page']) . ($pos === 'top' ? '\\\ ':''),
+                        $idx, 0
+                    );
+                }
             }
         }
     }

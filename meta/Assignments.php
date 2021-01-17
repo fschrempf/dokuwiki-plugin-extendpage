@@ -76,9 +76,12 @@ class Assignments
         $sql = 'REPLACE INTO assignments_patterns (pattern, page, pos) VALUES (?,?,?)';
         $ok = (bool) $this->sqlite->query($sql, array($pattern, $page, $pos));
 
+        $sql = 'SELECT last_insert_rowid()';
+        $res = $this->sqlite->query($sql);
+
         // reload patterns
         $this->loadPatterns();
-        $this->propagatePageAssignments($page, $pos);
+        $this->propagatePageAssignments($this->sqlite->res2single($res));
 
         return $ok;
     }
@@ -90,18 +93,18 @@ class Assignments
      * @param string $page
      * @return bool
      */
-    public function removePattern($pattern, $page, $pos)
+    public function removePattern($id)
     {
         // remove the pattern
-        $sql = 'DELETE FROM assignments_patterns WHERE pattern = ? AND page = ? AND pos = ?';
-        $ok = (bool) $this->sqlite->query($sql, array($pattern, $page, $pos));
+        $sql = 'DELETE FROM assignments_patterns WHERE id = ?';
+        $ok = (bool) $this->sqlite->query($sql, array($id));
 
         // reload patterns
         $this->loadPatterns();
 
         // fetch possibly affected pages
-        $sql = 'SELECT pid FROM assignments WHERE page = ? AND pos = ?';
-        $res = $this->sqlite->query($sql, $page, $pos);
+        $sql = 'SELECT pid FROM assignments WHERE pattern_id = ?';
+        $res = $this->sqlite->query($sql, $id);
         $pagerows = $this->sqlite->res2arr($res);
         $this->sqlite->res_close($res);
 
@@ -149,10 +152,10 @@ class Assignments
      * @param string $ext
      * @return bool
      */
-    public function assignPageExtension($page, $ext, $pos)
+    public function assignPageExtension($page, $pattern)
     {
-        $sql = 'REPLACE INTO assignments (pid, page, pos, assigned) VALUES (?, ?, ?, 1)';
-        return (bool) $this->sqlite->query($sql, array($page, $ext, $pos));
+        $sql = 'REPLACE INTO assignments (pid, pattern_id, assigned) VALUES (?, ?, 1)';
+        return (bool) $this->sqlite->query($sql, array($page, $pattern));
     }
 
     /**
@@ -162,10 +165,10 @@ class Assignments
      * @param string $ext
      * @return bool
      */
-    public function deassignPageExtension($page, $ext, $pos)
+    public function deassignPageExtension($page, $pattern)
     {
-        $sql = 'REPLACE INTO assignments (pid, page, assigned) VALUES (?, ?, 0)';
-        return (bool) $this->sqlite->query($sql, array($page, $ext, $pos));
+        $sql = 'REPLACE INTO assignments (pid, pattern_id, assigned) VALUES (?, ?, 0)';
+        return (bool) $this->sqlite->query($sql, array($page, $pattern));
     }
 
     /**
@@ -197,17 +200,24 @@ class Assignments
             foreach ($this->patterns as $row) {
                 if (($this->matchPagePattern($row['pattern'], $page, $pns)) &&
                     ($row['pos'] === $pos)) {
-                    $extensions[] = $row['page'];
+                    $extensions[] = array('page' => $row['page']);
                 }
             }
         } else {
             // just select
-            $sql = 'SELECT page FROM assignments WHERE pid = ? AND pos = ? AND assigned = 1';
+            $sql = 'SELECT assignments_patterns.page
+                    FROM assignments, assignments_patterns
+                    WHERE assignments.pattern_id = assignments_patterns.id
+                    AND assignments.pid = ?
+                    AND assignments_patterns.pos = ?
+                    AND assignments.assigned = 1';
             $res = $this->sqlite->query($sql, array($page, $pos));
             $list = $this->sqlite->res2arr($res);
             $this->sqlite->res_close($res);
             foreach ($list as $row) {
-                $extensions[] = $row['page'];
+                $extensions[] = array(
+                    'page' => $row['assignments_patterns.page']
+                );
             }
         }
 
@@ -261,17 +271,23 @@ class Assignments
      *
      * @param $page
      */
-    public function propagatePageAssignments($page, $pos)
+    public function propagatePageAssignments($pattern)
     {
-        $sql = 'SELECT pid FROM assignments WHERE page != ? OR assigned != 1';
-        $res = $this->sqlite->query($sql, $page);
+        $sql = 'SELECT assignments.pid, assignments.pattern_id, assignments_patterns.pos
+                FROM assignments, assignments_patterns
+                WHERE assignments.pattern_id = assignments_patterns.id
+                AND assignments.assigned != 1 AND assignments.pattern_id = ?';
+        $res = $this->sqlite->query($sql, $pattern);
         $pagerows = $this->sqlite->res2arr($res);
         $this->sqlite->res_close($res);
 
         foreach ($pagerows as $row) {
-            $pages = $this->getPageAssignments($row['pid'], $pos, true);
-            if (in_array($page, $pages)) {
-                $this->assignPageExtension($row['pid'], $page, $pos);
+            $pages = $this->getPageAssignments(
+                $row['assignments.pid'],
+                $row['assignments_patterns.pos'], true
+            );
+            if (in_array($row['assignments_patterns.page'], $pages)) {
+                $this->assignPageExtension($row['assignments.pid'], $pattern);
             }
         }
     }

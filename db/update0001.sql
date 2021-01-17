@@ -1,14 +1,13 @@
 CREATE TABLE assignments_patterns (
+    id INTEGER PRIMARY KEY,
     pattern NOT NULL,
     page NOT NULL,
-    pos NOT NULL,
-    PRIMARY KEY(pattern, page, pos)
+    pos NOT NULL
 );
 
 CREATE TABLE assignments (
     pid NOT NULL,
-    page NOT NULL,
-    pos NOT NULL,
+    pattern_id INTEGER NOT NULL,
     assigned BOOLEAN NOT NULL DEFAULT 1,
-    PRIMARY KEY(pid, page, pos)
+    PRIMARY KEY(pid, pattern_id)
 );

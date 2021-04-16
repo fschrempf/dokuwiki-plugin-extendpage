@@ -11,7 +11,7 @@ if (!defined('DOKU_INC')) {
     die();
 }
 
-use dokuwiki\plugin\extendpage\meta\Assignments;
+use dokuwiki\plugin\extendpage\meta\ExtendPagePatterns;
 
 class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
 {
@@ -41,16 +41,16 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
         global $ID;
 
         try {
-            $assignments = Assignments::getInstance();
-        } catch (ExtendPageException $e) {
+            $assignments = ExtendPagePatterns::getInstance();
+        } catch (RuntimeException $e) {
             msg($e->getMessage(), -1);
             return false;
         }
 
         if ($INPUT->str('action') && $INPUT->arr('assignment') && checkSecurityToken()) {
             $assignment = $INPUT->arr('assignment');
-            if (!blank($assignment['id']) && $INPUT->str('action') === 'delete') {
-                $ok = $assignments->removePattern($assignment['id']);
+            if ($INPUT->str('action') === 'delete') {
+                $ok = $assignments->removePattern($assignment['pattern'], $assignment['pos']);
                 if (!$ok) msg('failed to remove pattern', -1);
             } else if (!blank($assignment['pattern']) && !blank($assignment['page']) &&
                        $INPUT->str('action') === 'add') {
@@ -81,8 +81,8 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
         global $ID;
 
         try {
-            $ass = Assignments::getInstance();
-        } catch (ExtendPageException $e) {
+            $ass = ExtendPagePatterns::getInstance();
+        } catch (RuntimeException $e) {
             msg($e->getMessage(), -1);
             return false;
         }
@@ -104,7 +104,6 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
 
         // existing assignments
         foreach ($assignments as $assignment) {
-            $id = $assignment['id'];
             $pattern = $assignment['pattern'];
             $pos = $assignment['pos'];
             $page = $assignment['page'];
@@ -116,7 +115,8 @@ class admin_plugin_extendpage extends DokuWiki_Admin_Plugin
                 'page' => 'extendpage',
                 'action' => 'delete',
                 'sectok' => getSecurityToken(),
-                'assignment[id]' => $id
+                'assignment[pattern]' => $pattern,
+                'assignment[pos]' => $pos,
                 )
             );
 

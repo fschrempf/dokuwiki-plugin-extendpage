@@ -6,8 +6,7 @@
  * @author  Frieder Schrempf <dev@fris.de>
  */
 
-use dokuwiki\plugin\extendpage\meta\Assignments;
-use dokuwiki\plugin\extendpage\meta\ExtendPageException;
+use dokuwiki\plugin\extendpage\meta\ExtendPagePatterns;
 
 // must be run within Dokuwiki
 if (!defined('DOKU_INC')) {
@@ -26,7 +25,7 @@ class action_plugin_extendpage extends DokuWiki_Action_Plugin
      */
     public function register(Doku_Event_Handler $controller)
     {
-        $controller->register_hook('PARSER_WIKITEXT_PREPROCESS', 'AFTER', $this, 'extend_page');   
+        $controller->register_hook('PARSER_WIKITEXT_PREPROCESS', 'AFTER', $this, 'extend_page');
     }
 
     /**
@@ -48,15 +47,15 @@ class action_plugin_extendpage extends DokuWiki_Action_Plugin
         if (!page_exists($ID)) return;
 
         try {
-            $assignments = Assignments::getInstance();
-        } catch (ExtendPageException $e) {
+            $assignments = ExtendPagePatterns::getInstance();
+        } catch (RuntimeException $e) {
             return false;
         }
 
         foreach ($positions as $pos) {
             $idx = $pos === 'bottom' ? strlen($event->data):0;
             $extensions = $assignments->getPageAssignments($ID, $pos);
-            if (!$extensions) return true;
+            if (!$extensions) continue;
 
             foreach ($extensions as $ext) {
                 if ($pos === 'replace') {

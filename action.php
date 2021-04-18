@@ -44,7 +44,8 @@ class action_plugin_extendpage extends DokuWiki_Action_Plugin
         global $ID;
         $positions = array('replace', 'top', 'bottom');
 
-        if (!page_exists($ID)) return;
+        if (!page_exists($ID) || !auth_quickaclcheck($ID))
+            return;
 
         try {
             $assignments = ExtendPagePatterns::getInstance();
